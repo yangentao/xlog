@@ -1,32 +1,34 @@
 package io.github.yangentao.xlog
 
-class TreePrinter(vararg ps: LogPrinter) : LogPrinter {
-    private val list: ArrayList<LogPrinter> = arrayListOf(*ps)
+class TreePrinter(vararg ps: Pair<LogPrinter, LogFilter>) : LogPrinter {
+    private val list: ArrayList<Pair<LogPrinter, LogFilter>> = arrayListOf(*ps)
     override fun printItem(item: LogItem) {
         for (p in list) {
-            p.printItem(item)
+            if (p.second.accept(item)) {
+                p.first.printItem(item)
+            }
         }
     }
 
-    fun add(p: LogPrinter) {
-        list.add(p)
+    fun add(p: LogPrinter, f: LogFilter = LevelFilter(LogLevel.ALL)) {
+        list.add(p to f)
     }
 
     fun remove(p: LogPrinter) {
-        list.remove(p)
+        list.removeIf { it.first == p }
         p.dispose()
     }
 
     override fun flush() {
         for (p in list) {
-            p.flush()
+            p.first.flush()
         }
     }
 
     override fun dispose() {
         for (p in list) {
-            p.flush()
-            p.dispose()
+            p.first.flush()
+            p.first.dispose()
         }
         list.clear()
     }

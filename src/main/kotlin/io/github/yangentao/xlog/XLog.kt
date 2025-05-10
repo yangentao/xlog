@@ -9,7 +9,7 @@ import java.util.*
  * Created by entaoyang@163.com on 2018/11/8.
  */
 enum class LogLevel(val value: Int) {
-    DEBUG(0), VERBOSE(1), INFO(2), WARN(3), ERROR(4), FATAIL(5);
+    ALL(0), VERBOSE(1), DEBUG(2), INFO(3), WARN(4), ERROR(5), FATAIL(6), OFF(9);
 }
 
 data class LogItem(val level: LogLevel, val tag: String, val message: String, val tid: Long, val tm: Long = System.currentTimeMillis()) {
@@ -31,11 +31,42 @@ interface LogPrinter {
     fun dispose() {}
 }
 
+interface LogFilter {
+    fun accept(item: LogItem): Boolean
+}
+
 object XLog {
     private var printer: LogPrinter = ConsolePrinter
     private var formatter: LogItemFormatter = DefaultLogItemFormatter
-    var enabled = true
+    private var filter: LogFilter = LevelFilter(LogLevel.ALL)
+    private var count = 0
     var TAG: String = "xlog"
+    var enabled = true
+
+    private val timer: Timer = Timer("logtimer", true)
+    private val flushTask = object : TimerTask() {
+        override fun run() {
+            try {
+                if (count > 0) {
+                    flush()
+                }
+            } catch (ex: Throwable) {
+            }
+        }
+
+    }
+
+    init {
+        timer.scheduleAtFixedRate(flushTask, 2000, 2000)
+        Runtime.getRuntime().addShutdownHook(Thread {
+            timer.cancel()
+            flush()
+        }.also { it.isDaemon = true })
+    }
+
+    fun setFilter(filter: LogFilter) {
+        this.filter = filter
+    }
 
     @Synchronized
     fun formatMessage(item: LogItem): String {
@@ -61,13 +92,18 @@ object XLog {
 
     @Synchronized
     fun flush() {
+        count = 0
         printer.flush()
     }
 
     @Synchronized
     fun printItem(item: LogItem) {
-        if (enabled) {
+        if (enabled && filter.accept(item)) {
             printer.printItem(item)
+            count += 1
+            if (count > 20) {
+                flush()
+            }
         }
     }
 
@@ -124,11 +160,17 @@ object ConsolePrinter : LogPrinter {
 
 }
 
+class LevelFilter(val level: LogLevel) : LogFilter {
+    override fun accept(item: LogItem): Boolean {
+        return item.level.value >= level.value
+    }
+
+}
+
 object DefaultLogItemFormatter : LogItemFormatter {
     override fun format(item: LogItem): String {
         val sb = StringBuilder(item.message.length + 64)
-        val date =
-            SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault()).format(Date(item.tm))
+        val date = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault()).format(Date(item.tm))
         sb.append(date)
 //        sb.append(String.format(Locale.getDefault(), " [%4d] ", item.tid))
         sb.append(" ${item.tid} ")

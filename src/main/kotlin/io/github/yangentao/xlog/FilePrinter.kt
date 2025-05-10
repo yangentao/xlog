@@ -9,6 +9,7 @@ class FilePrinter(val file: File) : LogPrinter {
     @Synchronized
     override fun printItem(item: LogItem) {
         pw.println(item.toString())
+//        pw.flush()
     }
 
     @Synchronized

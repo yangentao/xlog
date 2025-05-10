@@ -2,12 +2,15 @@
 
 package io.github.yangentao.xlog
 
-import io.github.yangentao.xlog.XLog.flush
-
 /**
  * Created by yangentao on 2015/11/21.
  * entaoyang@163.com
  */
+fun fatal(vararg args: Any?) {
+    XLog.e(*args)
+    XLog.flush()
+    error(anyArrayToString(args))
+}
 
 fun logd(vararg args: Any?) {
     XLog.d(*args)
@@ -36,7 +39,7 @@ class TagLog(val tag: String) {
 
     fun e(vararg args: Any?) {
         XLog.printItem(LogLevel.ERROR, tag, anyArrayToString(args))
-        flush()
+        XLog.flush()
     }
 
     fun i(vararg args: Any?) {

@@ -9,11 +9,15 @@ import java.util.*
  */
 
 @Suppress("unused")
-class DirPrinter(private val dir: File, private val keepDays: Int = 30) : LogPrinter {
+class DirPrinter(private val dir: File, private val keepDays: Int = 30, fileSizeM: Long = 10) : LogPrinter {
+    @Suppress("PrivatePropertyName")
+    private val MAX_SIZE: Long = fileSizeM * 1_000_000
     private var filePrinter: FilePrinter? = null
     private var dayOfYear: Int = 0
     private var disposed = false
-    private val reg = Regex("\\d{4}-\\d{2}-\\d{2}\\.log")
+    private val reg = Regex("\\d{4}-\\d{2}-\\d{2}.*\\.log")
+
+    private var count = 0
 
     init {
         if (!dir.exists()) {
@@ -23,6 +27,7 @@ class DirPrinter(private val dir: File, private val keepDays: Int = 30) : LogPri
 
     @Synchronized
     override fun dispose() {
+        count = 0
         disposed = true
         filePrinter?.dispose()
         filePrinter = null;
@@ -35,6 +40,7 @@ class DirPrinter(private val dir: File, private val keepDays: Int = 30) : LogPri
 
     @Synchronized
     override fun printItem(item: LogItem) {
+        count += 1
         checkFile()
         filePrinter?.printItem(item)
     }
@@ -42,34 +48,58 @@ class DirPrinter(private val dir: File, private val keepDays: Int = 30) : LogPri
     @Suppress("UNUSED_PARAMETER")
     @Synchronized
     private fun checkFile() {
-        if (!disposed) {
+        if (disposed) {
             return
+        }
+
+        if (filePrinter == null) {
+            createNewFile()
+            return
+        }
+        if (count > 1000) {
+            val fileSize: Long = filePrinter?.file?.length() ?: 0L
+            if (fileSize > MAX_SIZE) {
+                createNewFile()
+                return
+            }
         }
         val days = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
-        if (dayOfYear == days && filePrinter != null) {
+        if (dayOfYear != days) {
+            createNewFile()
             return
         }
-        dayOfYear = days
+
+    }
+
+    private fun createNewFile() {
+        dayOfYear = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
+        count = 0
         filePrinter?.dispose()
         filePrinter = null
-
         val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         val ds = fmt.format(Date(System.currentTimeMillis()))
-        filePrinter = FilePrinter(File(dir, "$ds.log"))
+        var f = File(dir, "$ds.log")
+        var i = 1;
+        while (f.exists()) {
+            f = File(dir, "$ds.$i.log")
+            i += 1;
+        }
+        filePrinter = FilePrinter(f)
 
-        deleteLogs()
+        Thread { deleteLogs() }.start()
     }
 
     private fun deleteLogs() {
         if (keepDays <= 0) {
             return
         }
-        val n = keepDays
-        val fs = dir.listFiles() ?: return
-        val ls = fs.filter { it.name.matches(reg) }.sortedByDescending { it.name }
-        if (ls.size > n + 1) {
-            for (i in (n + 1) until ls.size) {
-                ls[i].delete()
+        val fs = dir.listFiles()?.filter { it.name.matches(reg) } ?: return
+        val c: Calendar = Calendar.getInstance()
+        c.add(Calendar.DAY_OF_YEAR, -keepDays)
+        val tm: Long = c.timeInMillis
+        for (f in fs) {
+            if (f.lastModified() < tm) {
+                f.delete()
             }
         }
     }
