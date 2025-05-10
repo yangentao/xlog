@@ -14,7 +14,7 @@ enum class LogLevel(val value: Int) {
 
 data class LogItem(val level: LogLevel, val tag: String, val message: String, val tid: Long, val tm: Long = System.currentTimeMillis()) {
 
-    private val foramttedMessage: String by lazy { LogX.formatMessage(this) }
+    private val foramttedMessage: String by lazy { XLog.formatMessage(this) }
 
     override fun toString(): String {
         return foramttedMessage
@@ -31,27 +31,30 @@ interface LogPrinter {
     fun dispose() {}
 }
 
-object LogX {
+object XLog {
     private var printer: LogPrinter = ConsolePrinter
     private var formatter: LogItemFormatter = DefaultLogItemFormatter
     var enabled = true
     var TAG: String = "xlog"
 
+    @Synchronized
     fun formatMessage(item: LogItem): String {
         return formatter.format(item)
     }
 
+    @Synchronized
     fun setFormatter(f: LogItemFormatter) {
         this.formatter = f;
     }
 
-    fun install(p: LogPrinter) {
+    @Synchronized
+    fun setPrinter(p: LogPrinter) {
         printer.dispose()
         printer = p
     }
 
     @Synchronized
-    fun uninstall() {
+    fun removePrinter() {
         printer.dispose()
         printer = EmptyPrinter
     }
@@ -109,7 +112,6 @@ object LogX {
     }
 
 }
-
 
 object EmptyPrinter : LogPrinter {
     override fun printItem(item: LogItem) {}

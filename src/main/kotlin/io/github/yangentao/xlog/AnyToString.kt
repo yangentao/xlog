@@ -3,13 +3,13 @@ package io.github.yangentao.xlog
 import java.io.PrintWriter
 import java.io.StringWriter
 
-fun anyArrayToString(args: Array<out Any?>): String {
+internal fun anyArrayToString(args: Array<out Any?>): String {
     return args.joinToString(" ") {
         anyToString(it)
     }
 }
 
-fun anyToString(obj: Any?): String {
+internal fun anyToString(obj: Any?): String {
     if (obj == null) {
         return "null"
     }

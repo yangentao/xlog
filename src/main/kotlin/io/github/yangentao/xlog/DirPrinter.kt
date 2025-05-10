@@ -1,9 +1,6 @@
 package io.github.yangentao.xlog
 
-import java.io.BufferedWriter
 import java.io.File
-import java.io.FileWriter
-import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -12,13 +9,11 @@ import java.util.*
  */
 
 @Suppress("unused")
-class DirPrinter(private val dir: File, private val keepDays: Int) : LogPrinter {
-
-    private var writer: BufferedWriter? = null
-    private var day: Int = 0
-
+class DirPrinter(private val dir: File, private val keepDays: Int = 30) : LogPrinter {
+    private var filePrinter: FilePrinter? = null
+    private var dayOfYear: Int = 0
     private var disposed = false
-    private val reg = Regex("\\d{4}-\\d{2}-\\d{2}.*\\.log")
+    private val reg = Regex("\\d{4}-\\d{2}-\\d{2}\\.log")
 
     init {
         if (!dir.exists()) {
@@ -28,52 +23,44 @@ class DirPrinter(private val dir: File, private val keepDays: Int) : LogPrinter 
 
     @Synchronized
     override fun dispose() {
-        if (!disposed) return
         disposed = true
-        writer?.flush()
-        writer?.close()
-        writer = null
+        filePrinter?.dispose()
+        filePrinter = null;
     }
 
     @Synchronized
     override fun flush() {
-        try {
-            writer?.flush()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        filePrinter?.flush()
+    }
+
+    @Synchronized
+    override fun printItem(item: LogItem) {
+        checkFile()
+        filePrinter?.printItem(item)
     }
 
     @Suppress("UNUSED_PARAMETER")
     @Synchronized
-    private fun peekWriter(tag: String): BufferedWriter? {
+    private fun checkFile() {
         if (!disposed) {
-            return null
+            return
         }
-        val dayOfYear = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
-        val oldW = writer
-        if (day == dayOfYear && oldW != null) {
-            return oldW
+        val days = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
+        if (dayOfYear == days && filePrinter != null) {
+            return
         }
-        oldW?.flush()
-        oldW?.close()
-        deleteOldLogs()
+        dayOfYear = days
+        filePrinter?.dispose()
+        filePrinter = null
 
         val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         val ds = fmt.format(Date(System.currentTimeMillis()))
-        val filename: String = "$ds.log"
-        try {
-            val writer = BufferedWriter(FileWriter(File(dir, filename), true), 16 * 1024)
-            this.writer = writer
-            day = dayOfYear
-            return writer
-        } catch (ex: IOException) {
-            ex.printStackTrace()
-        }
-        return null
+        filePrinter = FilePrinter(File(dir, "$ds.log"))
+
+        deleteLogs()
     }
 
-    private fun deleteOldLogs() {
+    private fun deleteLogs() {
         if (keepDays <= 0) {
             return
         }
@@ -84,18 +71,6 @@ class DirPrinter(private val dir: File, private val keepDays: Int) : LogPrinter 
             for (i in (n + 1) until ls.size) {
                 ls[i].delete()
             }
-        }
-    }
-
-    override fun printItem(item: LogItem) {
-        val w = peekWriter(item.tag) ?: return
-        try {
-            w.write(item.toString())
-            w.write("\n")
-        } catch (e: IOException) {
-            w.close()
-            e.printStackTrace()
-            writer = null
         }
     }
 }

@@ -1,20 +1,24 @@
 package io.github.yangentao.xlog
 
 import java.io.File
-import java.io.FileOutputStream
+import java.io.PrintWriter
 
 class FilePrinter(val file: File) : LogPrinter {
-    val fos: FileOutputStream = file.outputStream()
+    val pw: PrintWriter = file.printWriter()
 
+    @Synchronized
     override fun printItem(item: LogItem) {
-        fos.write(item.toString().toByteArray())
+        pw.println(item.toString())
     }
 
+    @Synchronized
     override fun flush() {
-        fos.flush()
+        pw.flush()
     }
 
+    @Synchronized
     override fun dispose() {
-        fos.close()
+        pw.flush()
+        pw.close()
     }
 }
