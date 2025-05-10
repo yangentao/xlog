@@ -127,17 +127,15 @@ object ConsolePrinter : LogPrinter {
 object DefaultLogItemFormatter : LogItemFormatter {
     override fun format(item: LogItem): String {
         val sb = StringBuilder(item.message.length + 64)
-        sb.append("TIM:")
         val date =
             SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault()).format(Date(item.tm))
         sb.append(date)
-        sb.append(" TID:")
-        sb.append(String.format(Locale.getDefault(), "%6d", item.tid))
-        sb.append(" LVL:")
+//        sb.append(String.format(Locale.getDefault(), " [%4d] ", item.tid))
+        sb.append(" ${item.tid} ")
         sb.append(item.level.name.first())
-        sb.append(" TAG:")
+        sb.append(" ")
         sb.append(item.tag)
-        sb.append(" MSG:")
+        sb.append(": ")
         sb.append(item.message)
         return sb.toString()
     }
