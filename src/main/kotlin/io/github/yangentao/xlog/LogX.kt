@@ -12,44 +12,48 @@ enum class LogLevel(val value: Int) {
     DEBUG(0), VERBOSE(1), INFO(2), WARN(3), ERROR(4), FATAIL(5);
 }
 
-data class LogItem(val level: LogLevel, val tag: String, val message: String) {
-    val line: String = makeLine()
+data class LogItem(val level: LogLevel, val tag: String, val message: String, val tid: Long, val tm: Long = System.currentTimeMillis()) {
 
-    @Suppress("DEPRECATION")
-    private fun makeLine(): String {
-        val sb = StringBuilder(message.length + 64)
-        sb.append("TIM:")
-        val date =
-            SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault()).format(Date(System.currentTimeMillis()))
-        sb.append(date)
-        sb.append(" TID:")
-        sb.append(String.format(Locale.getDefault(), "%6d", Thread.currentThread().id))
-        sb.append(" LVL:")
-        sb.append(level.name.first())
-        sb.append(" TAG:")
-        sb.append(tag)
-        sb.append(" MSG:")
-        sb.append(message)
-        return sb.toString()
+    private val foramttedMessage: String by lazy { LogX.formatMessage(this) }
+
+    override fun toString(): String {
+        return foramttedMessage
     }
+}
 
+interface LogItemFormatter {
+    fun format(item: LogItem): String
+}
+
+interface LogPrinter {
+    fun printItem(item: LogItem)
+    fun flush() {}
+    fun dispose() {}
 }
 
 object LogX {
-    private var printer: LogPrinter = ConsoleLogPrinter
+    private var printer: LogPrinter = ConsolePrinter
+    private var formatter: LogItemFormatter = DefaultLogItemFormatter
     var enabled = true
     var TAG: String = "xlog"
 
+    fun formatMessage(item: LogItem): String {
+        return formatter.format(item)
+    }
+
+    fun setFormatter(f: LogItemFormatter) {
+        this.formatter = f;
+    }
+
     fun install(p: LogPrinter) {
-        printer.uninstall()
+        printer.dispose()
         printer = p
-        p.install()
     }
 
     @Synchronized
     fun uninstall() {
-        printer.uninstall()
-        printer = EmptyLogPrinter
+        printer.dispose()
+        printer = EmptyPrinter
     }
 
     @Synchronized
@@ -64,69 +68,49 @@ object LogX {
         }
     }
 
-    fun printItem(level: LogLevel, tag: String, vararg args: Any?) {
-        printItem(LogItem(level, tag, anyArrayToString(args)))
+    @Suppress("DEPRECATION")
+    fun printItem(level: LogLevel, tag: String, msg: String) {
+        val item = LogItem(level, tag, msg, Thread.currentThread().id, System.currentTimeMillis())
+        printItem(item)
     }
 
     fun d(vararg args: Any?) {
-        printItem(LogItem(LogLevel.DEBUG, TAG, anyArrayToString(args)))
+        printItem(LogLevel.DEBUG, TAG, anyArrayToString(args))
     }
 
     fun w(vararg args: Any?) {
-        printItem(LogItem(LogLevel.WARN, TAG, anyArrayToString(args)))
+        printItem(LogLevel.WARN, TAG, anyArrayToString(args))
     }
 
     fun e(vararg args: Any?) {
-        printItem(LogItem(LogLevel.ERROR, TAG, anyArrayToString(args)))
+        printItem(LogLevel.ERROR, TAG, anyArrayToString(args))
         flush()
     }
 
     fun i(vararg args: Any?) {
-        printItem(LogItem(LogLevel.INFO, TAG, anyArrayToString(args)))
-    }
-
-    fun fatal(vararg args: Any?) {
-        printItem(LogItem(LogLevel.FATAIL, TAG, anyArrayToString(args)))
-        flush()
-        throw RuntimeException("fatal error!")
+        printItem(LogLevel.INFO, TAG, anyArrayToString(args))
     }
 
     fun dx(tag: String, vararg args: Any?) {
-        printItem(LogItem(LogLevel.DEBUG, tag, anyArrayToString(args)))
+        printItem(LogLevel.DEBUG, tag, anyArrayToString(args))
     }
 
     fun wx(tag: String, vararg args: Any?) {
-        printItem(LogItem(LogLevel.WARN, tag, anyArrayToString(args)))
+        printItem(LogLevel.WARN, tag, anyArrayToString(args))
     }
 
     fun ex(tag: String, vararg args: Any?) {
-        printItem(LogItem(LogLevel.ERROR, tag, anyArrayToString(args)))
+        printItem(LogLevel.ERROR, tag, anyArrayToString(args))
         flush()
     }
 
     fun ix(tag: String, vararg args: Any?) {
-        printItem(LogItem(LogLevel.INFO, tag, anyArrayToString(args)))
+        printItem(LogLevel.INFO, tag, anyArrayToString(args))
     }
 
-    fun fatalX(tag: String, vararg args: Any?) {
-        printItem(LogItem(LogLevel.FATAIL, tag, anyArrayToString(args)))
-        flush()
-        throw RuntimeException("fatal error!")
-    }
 }
 
-interface LogPrinter {
-    fun printItem(item: LogItem)
-    fun flush() {}
-    fun uninstall() {}
-    fun install() {}
-}
-
-object EmptyLogPrinter : LogPrinter {
-    override fun printItem(item: LogItem) {}
-}
-
-class LogTree(vararg ps: LogPrinter) : LogPrinter {
+class TreePrinter(vararg ps: LogPrinter) : LogPrinter {
     private val list: ArrayList<LogPrinter> = arrayListOf(*ps)
     override fun printItem(item: LogItem) {
         for (p in list) {
@@ -135,41 +119,56 @@ class LogTree(vararg ps: LogPrinter) : LogPrinter {
     }
 
     fun add(p: LogPrinter) {
-        p.install()
         list.add(p)
     }
 
     fun remove(p: LogPrinter) {
         list.remove(p)
-        p.uninstall()
+        p.dispose()
     }
 
     override fun flush() {
         for (p in list) {
             p.flush()
-
         }
     }
 
-    override fun uninstall() {
+    override fun dispose() {
         for (p in list) {
             p.flush()
-            p.uninstall()
+            p.dispose()
         }
         list.clear()
     }
 
-    override fun install() {
-        for (p in list) {
-            p.install()
-        }
+}
+
+object EmptyPrinter : LogPrinter {
+    override fun printItem(item: LogItem) {}
+}
+
+object ConsolePrinter : LogPrinter {
+    override fun printItem(item: LogItem) {
+        println(item)
     }
 
 }
 
-object ConsoleLogPrinter : LogPrinter {
-    override fun printItem(item: LogItem) {
-        println(item.line)
+object DefaultLogItemFormatter : LogItemFormatter {
+    override fun format(item: LogItem): String {
+        val sb = StringBuilder(item.message.length + 64)
+        sb.append("TIM:")
+        val date =
+            SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault()).format(Date(item.tm))
+        sb.append(date)
+        sb.append(" TID:")
+        sb.append(String.format(Locale.getDefault(), "%6d", item.tid))
+        sb.append(" LVL:")
+        sb.append(item.level.name.first())
+        sb.append(" TAG:")
+        sb.append(item.tag)
+        sb.append(" MSG:")
+        sb.append(item.message)
+        return sb.toString()
     }
-
 }
