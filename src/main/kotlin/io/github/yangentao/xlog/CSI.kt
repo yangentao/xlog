@@ -1,7 +1,14 @@
 package io.github.yangentao.xlog
 
-val String.csi: CSI get() = CSI(this)
 
+
+fun SGR(code: String): String {
+    return "\u001b[${code}m"
+}
+
+
+
+val String.csi: CSI get() = CSI(this)
 /// https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
 @Suppress("unused")
 class CSI(private val str: String) {
