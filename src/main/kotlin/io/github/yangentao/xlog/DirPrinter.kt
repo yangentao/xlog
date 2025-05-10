@@ -9,14 +9,13 @@ import java.util.*
  */
 
 @Suppress("unused")
-class DirPrinter(private val dir: File, private val keepDays: Int = 30, fileSizeM: Long = 10) : LogPrinter {
+class DirPrinter(private val dir: File, val namePrefix: String = "", private val keepDays: Int = 30, fileSizeM: Long = 10) : LogPrinter {
     @Suppress("PrivatePropertyName")
     private val MAX_SIZE: Long = fileSizeM * 1_000_000
+    private val nameRegex: Regex = Regex("$namePrefix\\d{4}-\\d{2}-\\d{2}.*\\.log")
     private var filePrinter: FilePrinter? = null
     private var dayOfYear: Int = 0
     private var disposed = false
-    private val reg = Regex("\\d{4}-\\d{2}-\\d{2}.*\\.log")
-
     private var count = 0
 
     init {
@@ -78,10 +77,10 @@ class DirPrinter(private val dir: File, private val keepDays: Int = 30, fileSize
         filePrinter = null
         val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         val ds = fmt.format(Date(System.currentTimeMillis()))
-        var f = File(dir, "$ds.log")
+        var f = File(dir, "$namePrefix$ds.log")
         var i = 1;
         while (f.exists()) {
-            f = File(dir, "$ds.$i.log")
+            f = File(dir, "$namePrefix$ds.$i.log")
             i += 1;
         }
         filePrinter = FilePrinter(f)
@@ -93,7 +92,7 @@ class DirPrinter(private val dir: File, private val keepDays: Int = 30, fileSize
         if (keepDays <= 0) {
             return
         }
-        val fs = dir.listFiles()?.filter { it.name.matches(reg) } ?: return
+        val fs = dir.listFiles()?.filter { it.name.matches(nameRegex) } ?: return
         val c: Calendar = Calendar.getInstance()
         c.add(Calendar.DAY_OF_YEAR, -keepDays)
         val tm: Long = c.timeInMillis

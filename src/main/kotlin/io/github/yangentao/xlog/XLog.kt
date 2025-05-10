@@ -79,9 +79,10 @@ object XLog {
     }
 
     @Synchronized
-    fun setPrinter(p: LogPrinter) {
+    fun setPrinter(p: LogPrinter, filter: LogFilter? = null) {
         printer.dispose()
         printer = p
+        if (filter != null) this.filter = filter
     }
 
     @Synchronized
@@ -113,8 +114,16 @@ object XLog {
         printItem(item)
     }
 
+    fun v(vararg args: Any?) {
+        printItem(LogLevel.VERBOSE, TAG, anyArrayToString(args))
+    }
+
     fun d(vararg args: Any?) {
         printItem(LogLevel.DEBUG, TAG, anyArrayToString(args))
+    }
+
+    fun i(vararg args: Any?) {
+        printItem(LogLevel.INFO, TAG, anyArrayToString(args))
     }
 
     fun w(vararg args: Any?) {
@@ -126,27 +135,6 @@ object XLog {
         flush()
     }
 
-    fun i(vararg args: Any?) {
-        printItem(LogLevel.INFO, TAG, anyArrayToString(args))
-    }
-
-    fun dx(tag: String, vararg args: Any?) {
-        printItem(LogLevel.DEBUG, tag, anyArrayToString(args))
-    }
-
-    fun wx(tag: String, vararg args: Any?) {
-        printItem(LogLevel.WARN, tag, anyArrayToString(args))
-    }
-
-    fun ex(tag: String, vararg args: Any?) {
-        printItem(LogLevel.ERROR, tag, anyArrayToString(args))
-        flush()
-    }
-
-    fun ix(tag: String, vararg args: Any?) {
-        printItem(LogLevel.INFO, tag, anyArrayToString(args))
-    }
-
 }
 
 object EmptyPrinter : LogPrinter {
@@ -155,7 +143,13 @@ object EmptyPrinter : LogPrinter {
 
 object ConsolePrinter : LogPrinter {
     override fun printItem(item: LogItem) {
-        println(item)
+        when (item.level) {
+            LogLevel.VERBOSE -> println(item.toString().csi.faint.italic)
+            LogLevel.INFO -> println(item.toString().csi.bold)
+            LogLevel.WARN -> println(item.toString().csi.yellow)
+            LogLevel.ERROR, LogLevel.FATAIL -> println(item.toString().csi.red)
+            else -> println(item)
+        }
     }
 
 }
