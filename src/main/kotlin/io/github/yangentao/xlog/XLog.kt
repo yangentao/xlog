@@ -141,7 +141,6 @@ object EmptyPrinter : LogPrinter {
     override fun printItem(item: LogItem) {}
 }
 
-
 class LevelFilter(val level: LogLevel) : LogFilter {
     override fun accept(item: LogItem): Boolean {
         return item.level.value >= level.value
@@ -153,11 +152,10 @@ object DefaultLogItemFormatter : LogItemFormatter {
     override fun format(item: LogItem): String {
         val sb = StringBuilder(item.message.length + 64)
         val date = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault()).format(Date(item.tm))
-        sb.append(date)
+        sb.append(date).append(' ')
+        sb.append(item.level.name.first()).append(' ')
 //        sb.append(String.format(Locale.getDefault(), " [%4d] ", item.tid))
-        sb.append(" ${item.tid} ")
-        sb.append(item.level.name.first())
-        sb.append(" ")
+        sb.append(item.tid.toString()).append(' ')
         sb.append(item.tag)
         sb.append(": ")
         sb.append(item.message)
