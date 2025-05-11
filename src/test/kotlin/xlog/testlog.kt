@@ -6,11 +6,11 @@ import java.io.File
 fun main() {
     val tp = TreePrinter()
     tp.add(ConsolePrinter)
-    tp.add(DirPrinter(File("/Users/entao/Downloads/a"), fileSizeM = 1))
-    tp.add(DirPrinter(File("/Users/entao/Downloads/a"), fileSizeM = 1, namePrefix = "err-"), LevelFilter(LogLevel.ERROR))
-    XLog.setPrinter(tp, LevelFilter(LogLevel.INFO))
+    tp.add(DirPrinter(File("/Users/entao/Downloads/a"), fileSize = 10_000))
+    tp.add(DirPrinter(File("/Users/entao/Downloads/a"), fileSize = 10_000, baseName = "err", checkLineCount = 100), LevelFilter(LogLevel.ERROR))
+    XLog.setPrinter(tp, LevelFilter(LogLevel.ALL))
     var i = 1
-    while (i < 100) {
+    while (i < 1000) {
         val n = i % 5
         when (n) {
             0 -> logv("Hello $i")
@@ -19,7 +19,7 @@ fun main() {
             3 -> logw("Hello $i")
             4 -> loge("Hello $i")
         }
+        loge("this is error $i")
         i += 1
-        Thread.sleep(100)
     }
 }

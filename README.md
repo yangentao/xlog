@@ -16,7 +16,7 @@ fun main() {
     val tp = TreePrinter()
     tp.add(ConsolePrinter)
     tp.add(DirPrinter(File("/Users/entao/Downloads/a"), fileSizeM = 1))
-    tp.add(DirPrinter(File("/Users/entao/Downloads/a"), fileSizeM = 1, namePrefix = "err-"), LevelFilter(LogLevel.ERROR))
+    tp.add(DirPrinter(File("/Users/entao/Downloads/a"), fileSizeM = 1, baseName = "err-"), LevelFilter(LogLevel.ERROR))
     XLog.setPrinter(tp, LevelFilter(LogLevel.INFO))
     var i = 1
     while (i < 100) {
