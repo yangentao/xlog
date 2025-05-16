@@ -14,7 +14,7 @@ object XLog {
     private var filter: LogFilter = LevelFilter(LogLevel.ALL)
     private var count = 0
     var TAG: String = "xlog"
-    var enabled = true
+    var level: LogLevel = LogLevel.ALL
 
     private val timer: Timer = Timer("logtimer", true)
     private val flushTask = object : TimerTask() {
@@ -71,7 +71,7 @@ object XLog {
 
     @Synchronized
     fun printItem(item: LogItem) {
-        if (enabled && filter.accept(item)) {
+        if (item.level.ge(level) && filter.accept(item)) {
             printer.printItem(item)
             count += 1
             if (count > 20) {

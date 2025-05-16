@@ -14,7 +14,9 @@ object EmptyPrinter : LogPrinter {
 }
 
 object ConsolePrinter : LogPrinter {
+    var level: LogLevel = LogLevel.ALL
     override fun printItem(item: LogItem) {
+        if (!item.level.ge(level)) return
         when (item.level) {
             LogLevel.VERBOSE -> println(SGR("2") + SGR("3") + item.toString() + SGR("0"))
             LogLevel.INFO -> println(item.toString().sgr("1"))
@@ -32,7 +34,6 @@ class FilePrinter(val file: File) : LogPrinter {
     @Synchronized
     override fun printItem(item: LogItem) {
         pw.println(item.toString())
-//        pw.flush()
     }
 
     @Synchronized
