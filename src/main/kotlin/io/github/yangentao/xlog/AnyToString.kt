@@ -3,7 +3,7 @@ package io.github.yangentao.xlog
 import java.io.PrintWriter
 import java.io.StringWriter
 
-internal fun anyArrayToString(args: Array<out Any?>): String {
+internal fun logArrayToString(args: Array<out Any?>): String {
     return args.joinToString(" ") {
         anyToString(it)
     }
@@ -28,19 +28,30 @@ internal fun anyToString(obj: Any?): String {
     }
 
     return when (obj) {
-        is CharArray -> "CharArray[${obj.joinToString(",") { anyToString(it) }}]"
-        is BooleanArray -> "BoolArray[${obj.joinToString(",") { anyToString(it) }}]"
-        is ShortArray -> "ShortArray[${obj.joinToString(",") { anyToString(it) }}]"
-        is IntArray -> "IntArray[${obj.joinToString(",") { anyToString(it) }}]"
-        is LongArray -> "LongArray[${obj.joinToString(",") { anyToString(it) }}]"
-        is FloatArray -> "FloatArray[${obj.joinToString(",") { anyToString(it) }}]"
-        is DoubleArray -> "DoubleArray[${obj.joinToString(",") { anyToString(it) }}]"
         is Array<*> -> "Array[${obj.joinToString(",") { anyToString(it) }}]"
         is List<*> -> "List[${obj.joinToString(",") { anyToString(it) }}]"
         is Set<*> -> "Set[${obj.joinToString(",") { anyToString(it) }}]"
         is Map<*, *> -> "Map[${obj.map { "${anyToString(it.key)} = ${anyToString(it.value)}" }.joinToString(",")}}]"
         is Iterable<*> -> "Iterable[${obj.joinToString(",") { anyToString(it) }}]"
-        else -> obj.toString()
+        is ByteArray -> "ByteArray[${obj.joinToString { hexByte(it.toInt()) }}]"
+        else -> {
+            if (obj::class.java.isArray) {
+                val length: Int = java.lang.reflect.Array.getLength(obj)
+                val ls = ArrayList<String>()
+                for (i in 0..<length) {
+                    val v = java.lang.reflect.Array.get(obj, i)
+                    ls.add(anyToString(v))
+                }
+                "[" + ls.joinToString(",") + "]"
+            } else {
+                obj.toString()
+            }
+        }
     }
-
 }
+
+private val DICT = "0123456789ABCDEF"
+private fun hexByte(b: Int): String {
+    return String(charArrayOf(DICT[(b shr 4) and 0xf], DICT[b and 0xf]))
+}
+

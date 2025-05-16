@@ -7,8 +7,11 @@ fun main() {
     val tp = TreePrinter()
     tp.add(ConsolePrinter)
     tp.add(DirPrinter(File("/Users/entao/Downloads/a"), fileSize = 10_000))
-    tp.add(DirPrinter(File("/Users/entao/Downloads/a"), fileSize = 10_000, baseName = "err", checkLineCount = 100), LevelFilter(LogLevel.ERROR))
-    XLog.setPrinter(tp, LevelFilter(LogLevel.ALL))
+    val dp = DirPrinter(File("/Users/entao/Downloads/a"), fileSize = 10_000, baseName = "err", checkLineCount = 100)
+    val pf = FilterPrinter(dp, LevelFilter(LogLevel.ERROR));
+    tp.add(pf)
+    XLog.setPrinter(tp)
+    XLog.setFilter(LevelFilter(LogLevel.ALL))
     var i = 1
     while (i < 1000) {
         val n = i % 5

@@ -2,42 +2,15 @@
 
 package io.github.yangentao.xlog
 
-import java.text.SimpleDateFormat
 import java.util.*
 
 /**
  * Created by entaoyang@163.com on 2018/11/8.
  */
-enum class LogLevel(val value: Int) {
-    ALL(0), VERBOSE(1), DEBUG(2), INFO(3), WARN(4), ERROR(5), FATAIL(6), OFF(9);
-}
-
-data class LogItem(val level: LogLevel, val tag: String, val message: String, val tid: Long, val tm: Long = System.currentTimeMillis()) {
-
-    private val foramttedMessage: String by lazy { XLog.formatMessage(this) }
-
-    override fun toString(): String {
-        return foramttedMessage
-    }
-}
-
-interface LogItemFormatter {
-    fun format(item: LogItem): String
-}
-
-interface LogPrinter {
-    fun printItem(item: LogItem)
-    fun flush() {}
-    fun dispose() {}
-}
-
-interface LogFilter {
-    fun accept(item: LogItem): Boolean
-}
 
 object XLog {
+    private var formatter: LogFormatter = DefaultLogFormatter
     private var printer: LogPrinter = ConsolePrinter
-    private var formatter: LogItemFormatter = DefaultLogItemFormatter
     private var filter: LogFilter = LevelFilter(LogLevel.ALL)
     private var count = 0
     var TAG: String = "xlog"
@@ -74,15 +47,14 @@ object XLog {
     }
 
     @Synchronized
-    fun setFormatter(f: LogItemFormatter) {
+    fun setFormatter(f: LogFormatter) {
         this.formatter = f;
     }
 
     @Synchronized
-    fun setPrinter(p: LogPrinter, filter: LogFilter? = null) {
+    fun setPrinter(p: LogPrinter) {
         printer.dispose()
         printer = p
-        if (filter != null) this.filter = filter
     }
 
     @Synchronized
@@ -115,50 +87,26 @@ object XLog {
     }
 
     fun v(vararg args: Any?) {
-        printItem(LogLevel.VERBOSE, TAG, anyArrayToString(args))
+        printItem(LogLevel.VERBOSE, TAG, logArrayToString(args))
     }
 
     fun d(vararg args: Any?) {
-        printItem(LogLevel.DEBUG, TAG, anyArrayToString(args))
+        printItem(LogLevel.DEBUG, TAG, logArrayToString(args))
     }
 
     fun i(vararg args: Any?) {
-        printItem(LogLevel.INFO, TAG, anyArrayToString(args))
+        printItem(LogLevel.INFO, TAG, logArrayToString(args))
     }
 
     fun w(vararg args: Any?) {
-        printItem(LogLevel.WARN, TAG, anyArrayToString(args))
+        printItem(LogLevel.WARN, TAG, logArrayToString(args))
     }
 
     fun e(vararg args: Any?) {
-        printItem(LogLevel.ERROR, TAG, anyArrayToString(args))
+        printItem(LogLevel.ERROR, TAG, logArrayToString(args))
         flush()
     }
 
 }
 
-object EmptyPrinter : LogPrinter {
-    override fun printItem(item: LogItem) {}
-}
 
-class LevelFilter(val level: LogLevel) : LogFilter {
-    override fun accept(item: LogItem): Boolean {
-        return item.level.value >= level.value
-    }
-
-}
-
-object DefaultLogItemFormatter : LogItemFormatter {
-    override fun format(item: LogItem): String {
-        val sb = StringBuilder(item.message.length + 64)
-        val date = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault()).format(Date(item.tm))
-        sb.append(date).append(' ')
-        sb.append(item.level.name.first()).append(' ')
-//        sb.append(String.format(Locale.getDefault(), " [%4d] ", item.tid))
-        sb.append(item.tid.toString()).append(' ')
-        sb.append(item.tag)
-        sb.append(": ")
-        sb.append(item.message)
-        return sb.toString()
-    }
-}

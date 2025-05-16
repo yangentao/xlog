@@ -9,7 +9,7 @@ package io.github.yangentao.xlog
 fun fatal(vararg args: Any?) {
     XLog.e(*args)
     XLog.flush()
-    error(anyArrayToString(args))
+    error(logArrayToString(args))
 }
 
 fun logv(vararg args: Any?) {
@@ -30,28 +30,4 @@ fun logw(vararg args: Any?) {
 
 fun loge(vararg args: Any?) {
     XLog.e(*args)
-}
-
-class TagLog(val tag: String) {
-    fun v(vararg args: Any?) {
-        XLog.printItem(LogLevel.VERBOSE, tag, anyArrayToString(args))
-    }
-
-    fun d(vararg args: Any?) {
-        XLog.printItem(LogLevel.DEBUG, tag, anyArrayToString(args))
-    }
-
-    fun i(vararg args: Any?) {
-        XLog.printItem(LogLevel.INFO, tag, anyArrayToString(args))
-    }
-
-    fun w(vararg args: Any?) {
-        XLog.printItem(LogLevel.WARN, tag, anyArrayToString(args))
-    }
-
-    fun e(vararg args: Any?) {
-        XLog.printItem(LogLevel.ERROR, tag, anyArrayToString(args))
-        XLog.flush()
-    }
-
 }
