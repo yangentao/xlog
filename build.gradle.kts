@@ -16,7 +16,7 @@ plugins {
 
 group = "io.github.yangentao"
 
-version = "1.1.1"
+version = "1.1.2"
 val artifactName = "xlog"
 val githubLib = "xlog"
 val descLib = "Java/Kotlin log."
