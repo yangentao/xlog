@@ -6,7 +6,7 @@ interface LogFilter {
 
 class LevelFilter(val level: LogLevel) : LogFilter {
     override fun accept(item: LogItem): Boolean {
-        return item.level.ge(level)
+        return item.level >= level
     }
 
 }

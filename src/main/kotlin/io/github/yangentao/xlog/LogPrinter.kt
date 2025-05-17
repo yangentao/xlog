@@ -16,7 +16,7 @@ object EmptyPrinter : LogPrinter {
 object ConsolePrinter : LogPrinter {
     var level: LogLevel = LogLevel.ALL
     override fun printItem(item: LogItem) {
-        if (!item.level.ge(level)) return
+        if (item.level < level) return
         when (item.level) {
             LogLevel.VERBOSE -> println(SGR("2") + SGR("3") + item.toString() + SGR("0"))
             LogLevel.INFO -> println(item.toString().sgr("1"))

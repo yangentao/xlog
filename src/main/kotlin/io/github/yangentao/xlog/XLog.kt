@@ -71,7 +71,7 @@ object XLog {
 
     @Synchronized
     fun printItem(item: LogItem) {
-        if (item.level.ge(level) && filter.accept(item)) {
+        if (item.level >= level && filter.accept(item)) {
             printer.printItem(item)
             count += 1
             if (count > 20) {

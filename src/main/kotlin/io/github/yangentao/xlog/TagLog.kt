@@ -4,7 +4,7 @@ class TagLog(val tag: String) {
     var level: LogLevel = LogLevel.ALL
 
     private fun allow(lv: LogLevel): Boolean {
-        return lv.ge(level)
+        return lv >= level
     }
 
     fun v(vararg args: Any?) {
