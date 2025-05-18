@@ -53,9 +53,9 @@ class DirPrinter(
         return File(dir, "$baseName.$extName")
     }
 
-    private fun makeBackupFile(): File {
+    private fun makeBackupFile(time: Long): File {
         val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val ds = fmt.format(Date(System.currentTimeMillis()))
+        val ds = fmt.format(Date(time))
         val reg: Regex = Regex("${baseName}_$ds\\.(\\d+)\\.$extName")
         var idx: Int = 0
         val fileList: List<File> = dir.listFiles()?.toList() ?: emptyList()
@@ -124,11 +124,27 @@ class DirPrinter(
     private fun createNewFile() {
         dayOfYear = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
         lines = 0
-        val oldFile: File? = filePrinter?.file
-        filePrinter?.dispose()
-        filePrinter = null
-        oldFile?.also { it.renameTo(makeBackupFile()) }
-        filePrinter = FilePrinter(makeFile())
+        var newFile = makeFile()
+        val fp: FilePrinter? = filePrinter
+        if (fp != null) {
+            val oldFile: File = fp.file
+            fp.dispose()
+            filePrinter = null
+            oldFile.renameTo(makeBackupFile(System.currentTimeMillis()))
+        } else if (newFile.exists()) {
+            val tm = newFile.lastModified()
+            val date = Date(tm)
+            val now = Date()
+
+            @Suppress("DEPRECATION")
+            val sameDay = date.year == now.year && date.month == now.month && date.day == now.day
+            if (!sameDay) {
+                val f = makeBackupFile(tm)
+                newFile.renameTo(f)
+                newFile = makeFile()
+            }
+        }
+        filePrinter = FilePrinter(newFile)
         Thread { deleteExpired() }.start()
     }
 
