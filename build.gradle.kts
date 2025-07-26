@@ -7,7 +7,7 @@ buildscript {
     }
 }
 plugins {
-    kotlin("jvm") version "2.1.20"
+    kotlin("jvm") version "2.2.0"
     signing
     id("maven-publish")
     id("org.jetbrains.dokka") version "2.0.0"
@@ -16,7 +16,7 @@ plugins {
 
 group = "io.github.yangentao"
 
-version = "1.1.3"
+version = "2.0.0"
 val artifactName = "xlog"
 val githubLib = "xlog"
 val descLib = "Java/Kotlin log."
